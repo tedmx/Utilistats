@@ -56,22 +56,6 @@ export function PropertyPage() {
     "dark:border-slate-700 dark:bg-slate-900 dark:text-white" // Dark
   )
 
-  const maxDeltas = useMemo(() => {
-    const result: Record<string, number> = {}
-    if (!property) return result
-
-    property.activeCounters.forEach(counter => {
-      const deltas = readings.map((r, i) => {
-        if (i === 0) return 0
-        const curr = (r as any)[counter] || 0
-        const prev = (readings[i - 1] as any)[counter] || 0
-        return curr - prev
-      })
-      result[counter] = Math.max(...deltas)
-    })
-    return result
-  }, [readings, property?.activeCounters])
-
   const counterStats = useMemo(() => {
     const result: Record<string, { min: number, max: number }> = {}
     if (!property) return result

@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge'
 
 import { MOCK_TARIFFS } from '../mocks/data'
 import type { CounterType } from '../mocks/data'
+import type { ReadingFormValues } from '../schemas/readingSchema'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -18,7 +19,7 @@ export function getTariffForDate(resource: CounterType, date: string): number {
   return applicableTariffs[0]?.price || 0
 }
 
-export const getProjectedReading = (readings: Reading[], counter: CounterType) => {
+export const getProjectedReading = (readings: ReadingFormValues[], counter: CounterType) => {
   if (readings.length < 2) return null
 
   // Работаем с отсортированным массивом (от старых к новым)
