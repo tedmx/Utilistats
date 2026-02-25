@@ -63,8 +63,8 @@ export function PropertyPage() {
     property.activeCounters.forEach(counter => {
       const deltas = readings.map((r, i) => {
         if (i === 0) return 0
-        const curr = (r as any)[counter] || 0
-        const prev = (readings[i - 1] as any)[counter] || 0
+        const curr = r[counter] || 0
+        const prev = readings[i - 1][counter] || 0
         return curr - prev
       }).filter(d => d > 0) // Игнорируем нулевые дельты первой строки
 
@@ -74,7 +74,7 @@ export function PropertyPage() {
       }
     })
     return result
-  }, [readings, property?.activeCounters])
+  }, [readings, property])
 
   const getHeatmapStyles = (currentDiff: number, counter: string) => {
     if (currentDiff <= 0) return ''
@@ -233,8 +233,8 @@ export function PropertyPage() {
                         {new Date(r.date).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
                       </td>
                       {property.activeCounters.map(counter => {
-                        const currentVal = (r as any)[counter] || 0
-                        const prevVal = (readings[idx - 1] as any)?.[counter] || 0
+                        const currentVal = r[counter] || 0
+                        const prevVal = readings[idx - 1]?.[counter] || 0
                         const diff = idx === 0 ? 0 : currentVal - prevVal
                         const tariff = getTariffForDate(counter, r.date)
                         const sum = diff * tariff
