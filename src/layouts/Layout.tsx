@@ -1,8 +1,29 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+
 import { cn } from '../lib/utils'
+import { dataService } from '../lib/dataService'
 
 export function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const [user, setUser] = useState<{ email?: string; id: string } | null>(null)
+
+  useEffect(() => {
+    // Получаем данные пользователя (из Supabase или Mock)
+    dataService.getCurrentUser().then(setUser)
+  }, [])
+
+  const handleSignOut = async () => {
+    await dataService.signOut()
+    navigate('/login')
+  }
+
+  // Получаем инициалы для аватарки
+  const getInitials = (email?: string) => {
+    if (!email) return '??'
+    return email.substring(0, 2).toUpperCase()
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
@@ -34,14 +55,29 @@ export function Layout() {
               </nav>
             </div>
 
-            {/* Профиль пользователя (заглушка) */}
+            {/* Профиль пользователя */}
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex flex-col items-end mr-2">
-                <span className="text-sm font-semibold text-slate-900">Иван Иванов</span>
-                <span className="text-xs text-slate-500">ivan@example.com</span>
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">
+                  {user?.email?.split('@')[0] || 'Пользователь'}
+                </span>
+                <span className="text-xs text-slate-500">{user?.email || 'Загрузка...'}</span>
               </div>
-              <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-slate-600 font-medium">
-                ИИ
+              
+              <div className="group relative">
+                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium cursor-pointer">
+                  {getInitials(user?.email)}
+                </div>
+                
+                {/* Выпадающее меню (простая реализация) */}
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                  <button 
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Выйти из системы
+                  </button>
+                </div>
               </div>
             </div>
           </div>

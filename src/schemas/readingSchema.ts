@@ -21,7 +21,8 @@ export const readingSchema = z.object({
     
   water_hot: z.coerce
     .number({ message: 'Введите число' })
-    .min(0, 'Минимум 0'),
+    .min(0, 'Минимум 0')
+    .optional(),
 
   // Газ
   gas: z.coerce

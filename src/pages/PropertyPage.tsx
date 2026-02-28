@@ -1,15 +1,18 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useForm, type Resolver } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 
+import { supabase } from '../lib/supabase'
+import { cn, getProjectedReading, getTariffForDate } from '../lib/utils'
+import { dataService } from '../lib/dataService'
 import { readingSchema } from '../schemas/readingSchema'
-import { MOCK_PROPERTIES, MOCK_READINGS } from '../mocks/data'
 
 import type { ReadingFormValues } from '../schemas/readingSchema'
-import { cn, getProjectedReading, getTariffForDate } from '../lib/utils'
+import type { CounterType, Property } from '../mocks/fixtures'
+import type { Resolver } from 'react-hook-form'
 
 type Reading = ReadingFormValues & { id: string }
 
@@ -22,31 +25,101 @@ const COUNTER_LABELS: Record<string, string> = {
 }
 export function PropertyPage() {
   const { id } = useParams()
-  const property = MOCK_PROPERTIES.find(p => p.id === id)
-  
-  // Создаем локальный стейт на базе моков
-  const [readings, setReadings] = useState<Reading[]>(() => {
-    // Берем данные из моков и приводим их к нашему типу
-    const initialData = MOCK_READINGS[id as keyof typeof MOCK_READINGS] || []
-    return initialData as Reading[]
-  })
+  const [isSaving, setIsSaving] = useState(false)
+
+  const [properties, setProperties] = useState<Property[]>([])
+  const property = useMemo(() => properties.find(p => p.id === id), [properties, id])
+
+  useEffect(() => {
+    const initPage = async () => {
+      if (!id) return
+      setLoading(true)
+      try {
+        // Загружаем всё параллельно для скорости
+        const [props] = await Promise.all([
+          dataService.getProperties(),
+          // fetchReadings логику можно вынести в dataService или оставить здесь
+        ])
+        setProperties(props)
+        
+        const readingsData = await dataService.getReadings(id)
+        setReadings(readingsData)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    initPage()
+  }, [id])
+
+  const [readings, setReadings] = useState<Reading[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchReadings = async () => {
+      if (!id) return
+      
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('readings')
+        .select('*')
+        .eq('property_id', id)
+        .order('date', { ascending: true }) // Важно для расчета Δ
+
+      if (error) {
+        console.error('Ошибка загрузки:', error.message)
+      } else {
+        setReadings(data || [])
+      }
+      setLoading(false)
+    }
+
+    fetchReadings()
+  }, [id])
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ReadingFormValues>({
     resolver: zodResolver(readingSchema) as Resolver<ReadingFormValues>
   })
 
-  const onSubmit = (data: ReadingFormValues) => {
-    const newEntry = {
-      id: crypto.randomUUID(),
-      ...data
+  const onSubmit = async (data: ReadingFormValues) => {
+    if (!id) return
+    setIsSaving(true)
+
+    try {
+      const newEntry = {
+        ...data,
+        property_id: id,
+        // Supabase сам создаст id (uuid), если настроено в таблице
+      }
+
+      const { data: insertedData, error } = await supabase
+        .from('readings')
+        .insert([newEntry])
+        .select()
+
+      if (error) throw error
+
+      if (insertedData) {
+        setReadings(prev => {
+          const updated = [...prev, insertedData[0]]
+          return updated.sort((a, b) => 
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          )
+        })
+        reset()
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        // Теперь TS знает, что у err есть свойство message
+        alert('Ошибка сохранения: ' + error.message)
+      } else {
+        // На случай, если выброшено что-то странное (не объект Error)
+        alert('Произошла неизвестная ошибка')
+      }
+    } finally {
+      setIsSaving(false)
     }
-    setReadings(prev => {
-      const updated = [...prev, newEntry]
-      return updated.sort((a, b) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      )
-    })
-    reset()
   }
 
   // Внутри компонента PropertyPage перед return
@@ -60,17 +133,19 @@ export function PropertyPage() {
     const result: Record<string, { min: number, max: number }> = {}
     if (!property) return result
 
-    property.activeCounters.forEach(counter => {
+    property.activeCounters.forEach((counter: CounterType) => {
       const deltas = readings.map((r, i) => {
         if (i === 0) return 0
         const curr = r[counter] || 0
         const prev = readings[i - 1][counter] || 0
         return curr - prev
-      }).filter(d => d > 0) // Игнорируем нулевые дельты первой строки
+      }).filter(d => d > 0)
 
-      result[counter] = {
-        min: Math.min(...deltas),
-        max: Math.max(...deltas)
+      if (deltas.length > 0) {
+        result[counter] = {
+          min: Math.min(...deltas),
+          max: Math.max(...deltas)
+        }
       }
     })
     return result
@@ -106,6 +181,15 @@ export function PropertyPage() {
     }
 
     return cn(bgClass, textClass)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 animate-pulse">Загружаем данные из облака...</p>
+      </div>
+    )
   }
 
   if (!property) return <div className="p-8 text-center">Объект не найден</div>
@@ -154,12 +238,19 @@ export function PropertyPage() {
                 </div>
               ))}
 
-              <button className={cn(
-                "w-full py-3 rounded-xl font-bold transition-all active:scale-[0.98] mt-4",
-                "bg-slate-900 text-white hover:bg-slate-800",
-                "dark:bg-blue-600 dark:hover:bg-blue-500"
-              )}>
-                Сохранить запись
+              <button 
+                disabled={isSaving}
+                className={cn(
+                  "w-full py-3 rounded-xl font-bold transition-all active:scale-[0.98] mt-4 flex justify-center items-center",
+                  "bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed",
+                  "dark:bg-blue-600 dark:hover:bg-blue-500"
+                )}
+              >
+                {isSaving ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Сохранить запись'
+                )}
               </button>
             </form>
           </div>
@@ -168,7 +259,14 @@ export function PropertyPage() {
         {/* Список показаний */}
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-xl font-bold dark:text-white">История потребления</h2>
-          {readings.length === 0 ? (
+          {loading ? (
+            // Заглушка (Skeleton), пока данные подгружаются
+            <div className="space-y-4 animate-pulse">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800/50 rounded-2xl w-full" />
+              ))}
+            </div>
+          ) : readings.length === 0 ? (
             <div className="p-12 border-2 border-dashed border-slate-200 rounded-3xl text-center text-slate-400">
               Пока нет ни одной записи
             </div>

@@ -1,8 +1,8 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-import { MOCK_TARIFFS } from '../mocks/data'
-import type { CounterType } from '../mocks/data'
+import { MOCK_TARIFFS } from '../mocks/fixtures'
+import type { CounterType } from '../mocks/fixtures'
 import type { ReadingFormValues } from '../schemas/readingSchema'
 
 export function cn(...inputs: ClassValue[]) {

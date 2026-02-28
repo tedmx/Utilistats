@@ -1,8 +1,18 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MOCK_PROPERTIES } from '../mocks/data'
+
+import { dataService } from '../lib/dataService'
 import { cn } from '../lib/utils'
 
+import type { Property } from '../mocks/fixtures'
+
 export function Dashboard() {
+  const [properties, setProperties] = useState<Property[]>([])
+
+  useEffect(() => {
+    dataService.getProperties().then(setProperties)
+  }, [])
+
   return (
     <div className="space-y-8">
       {/* Приветствие и заголовок */}
@@ -18,7 +28,7 @@ export function Dashboard() {
 
       {/* Сетка объектов */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {MOCK_PROPERTIES.map((property) => (
+        {properties.map((property) => (
           <Link 
             to={`/property/${property.id}`}
             className={cn(
@@ -44,6 +54,12 @@ export function Dashboard() {
             </div>
           </Link>
         ))}
+        <Link 
+          to="/property/new" 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all"
+        >
+          <span>+ Добавить объект</span>
+        </Link>
       </div>
     </div>
   )
