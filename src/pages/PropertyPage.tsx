@@ -13,9 +13,10 @@ import { readingSchema } from '../schemas/readingSchema'
 
 import type { ReadingFormValues } from '../schemas/readingSchema'
 import type { Resolver } from 'react-hook-form'
-import type { Reading, Property, CounterType } from '../types'
+import type { Reading, Property, CounterType, CategoryTariff } from '../types'
 import { EditReadingModal } from '../components/EditReadingModal'
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
+import { Settings2 } from 'lucide-react'
 
 const COUNTER_LABELS: Record<string, string> = {
   elec_t1: 'Электроэнергия T1',
@@ -36,6 +37,7 @@ export function PropertyPage() {
 
   const [editingReading, setEditingReading] = useState<Reading | null>(null)
   const [readingToDelete, setReadingToDelete] = useState<string | null>(null)
+  const [categoryTariffs, setCategoryTariffs] = useState<CategoryTariff[]>([])
 
   useEffect(() => {
     const initPage = async () => {
@@ -45,7 +47,6 @@ export function PropertyPage() {
         // Загружаем всё параллельно для скорости
         const [props] = await Promise.all([
           dataService.getProperties(),
-          // fetchReadings логику можно вынести в dataService или оставить здесь
         ])
         setProperties(props)
 
@@ -81,6 +82,21 @@ export function PropertyPage() {
 
     fetchReadings()
   }, [id])
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!id || !property) return
+
+      // Загружаем тарифы для категории объекта
+      const { data: tariffData } = await supabase
+        .from('category_tariffs')
+        .select('*')
+        // .eq('category_id', property.category_id)
+
+      if (tariffData) setCategoryTariffs(tariffData)
+    }
+    loadData()
+  }, [id, property])
 
   const {
     register,
@@ -245,6 +261,13 @@ export function PropertyPage() {
         <div>
           <h1 className='text-3xl font-extrabold tracking-tight'>{property.name}</h1>
           <p className='text-slate-500'>{property.address}</p>
+          <button
+            onClick={() => {/* Открыть модалку редактирования объекта */ }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-bold"
+          >
+            <Settings2 className="w-5 h-5" />
+            Настроить объект
+          </button>
         </div>
       </div>
 
@@ -329,6 +352,7 @@ export function PropertyPage() {
               onEdit={setEditingReading}
               onDelete={setReadingToDelete}
               getHeatmapStyles={getHeatmapStyles}
+              categoryTariffs={categoryTariffs}
             />
           )}
         </div>

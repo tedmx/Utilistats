@@ -1,7 +1,7 @@
 import React from 'react'
 import { TrashIcon } from 'lucide-react'
 import { cn, formatDate, getProjectedReading, getTariffForDate } from '../lib/utils'
-import type { Reading, Property, CounterType } from '../types'
+import type { Reading, Property, CounterType, CategoryTariff } from '../types'
 
 interface ReadingsTableProps {
   readings: Reading[]
@@ -10,6 +10,7 @@ interface ReadingsTableProps {
   onDelete: (id: string) => void
   counterLabels: Record<string, string>
   getHeatmapStyles: (diff: number, counter: string) => string
+  categoryTariffs: CategoryTariff[]
 }
 
 export function ReadingsTable({
@@ -19,6 +20,7 @@ export function ReadingsTable({
   onDelete,
   counterLabels,
   getHeatmapStyles,
+  categoryTariffs,
 }: ReadingsTableProps) {
   return (
     <div className='lg:col-span-3 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm'>
@@ -63,7 +65,11 @@ export function ReadingsTable({
             </td>
             {property.activeCounters.map((counter: CounterType) => {
               const projection = getProjectedReading(readings, counter)
-              const tariff = getTariffForDate(counter, new Date().toISOString().split('T')[0])
+              const tariff = getTariffForDate(
+                categoryTariffs,
+                counter,
+                new Date().toISOString().split('T')[0]
+              )
               const cost = projection ? Number(projection.delta) * tariff : 0
               return (
                 <React.Fragment key={`projected-${counter}`}>
@@ -101,8 +107,9 @@ export function ReadingsTable({
                 const currentVal = (r[counter as keyof Reading] as number) || 0
                 const prevVal = (readings[idx - 1]?.[counter as keyof Reading] as number) || 0
                 const diff = idx === 0 ? 0 : currentVal - prevVal
-                const tariff = getTariffForDate(counter, r.date)
+                const tariff = getTariffForDate(categoryTariffs, counter, r.date)
                 const sum = diff * tariff
+
                 return (
                   <React.Fragment key={`${r.id}-${counter}`}>
                     <td className='px-4 py-4 text-sm border-l border-slate-100 dark:border-slate-800'>

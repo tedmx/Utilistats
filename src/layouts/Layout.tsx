@@ -3,11 +3,14 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { cn } from '../lib/utils'
 import { dataService } from '../lib/dataService'
+import { LayoutGrid } from 'lucide-react'
+import { useAdmin } from '../hooks/useAdmin'
 
 export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [user, setUser] = useState<{ email?: string; id: string } | null>(null)
+  const isAdmin = useAdmin()
 
   useEffect(() => {
     // Получаем данные пользователя (из Supabase или Mock)
@@ -39,19 +42,15 @@ export function Layout() {
                 </div>
                 <span className="text-xl font-bold tracking-tight text-slate-900  dark:text-slate-400">ЖКХ Контроль</span>
               </Link>
-              
+
               <nav className="hidden md:flex items-center gap-6">
-                <Link 
-                  to="/" 
-                  className={`text-sm font-medium transition-colors ${
-                    location.pathname === '/' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                <Link
+                  to="/"
+                  className={`text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'
+                    }`}
                 >
                   Объекты
                 </Link>
-                <span className="text-sm font-medium text-slate-500 hover:text-slate-900 cursor-not-allowed opacity-50">
-                  Аналитика
-                </span>
               </nav>
             </div>
 
@@ -63,20 +62,33 @@ export function Layout() {
                 </span>
                 <span className="text-xs text-slate-500">{user?.email || 'Загрузка...'}</span>
               </div>
-              
+
               <div className="group relative">
                 <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 font-medium cursor-pointer">
                   {getInitials(user?.email)}
                 </div>
-                
+
                 {/* Выпадающее меню (простая реализация) */}
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                  <button 
+                  <button
                     onClick={handleSignOut}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     Выйти из системы
                   </button>
+
+                  {isAdmin && (
+                    <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800">
+                      <p className="px-4 text-[10px] font-bold text-slate-400 uppercase mb-2">Администрирование</p>
+                      <Link
+                        to="/admin/categories"
+                        className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 rounded-xl transition-all"
+                      >
+                        <LayoutGrid className="w-5 h-5" />
+                        Категории и тарифы
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

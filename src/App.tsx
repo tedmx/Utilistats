@@ -7,15 +7,16 @@ import { LoginPage } from './pages/LoginPage'
 import { Dashboard } from './pages/Dashboard'
 import { PropertyPage } from './pages/PropertyPage'
 import { PropertyEditPage } from './pages/PropertyEditPage'
+import { AdminCategories } from './pages/AdminCategories'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Публичный маршрут */}
-        <Route path="/login" element={<LoginPage />} /> 
+        <Route path="/login" element={<LoginPage />} />
 
-        <Route 
+        <Route
           element={
             <AuthGuard>
               <Layout />
@@ -27,6 +28,8 @@ export default function App() {
           <Route path="/property/:id" element={<PropertyPage />} />
           <Route path="/property/new" element={<PropertyEditPage />} />
           <Route path="/property/:id/edit" element={<PropertyEditPage />} />
+
+          <Route path="/admin/categories" element={<AdminCategories />} />
         </Route>
 
         {/* 3. Редирект для несуществующих страниц */}

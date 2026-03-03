@@ -1,22 +1,42 @@
 import type { ReadingFormValues } from '../schemas/readingSchema'
-import type { Property as FixtureProperty, CounterType as FixtureCounterType } from '../mocks/fixtures'
 
-// Тип для записи показаний (данные из формы + ID из базы)
-export type Reading = ReadingFormValues & { 
-  id: string 
-  property_id: string // Добавляем, так как это поле есть в БД
+export type UserRole = 'user' | 'admin'
+
+export interface Profile {
+  id: string
+  email: string | null
+  role: UserRole
 }
 
-// Тип для объекта недвижимости (переиспользуем из фикстур или расширяем)
-export type Property = FixtureProperty
+export type CounterType = 'elec_t1' | 'elec_t2' | 'water_cold' | 'water_hot' | 'gas'
 
-// Тип для ключей счетчиков
-export type CounterType = FixtureCounterType
-
-// Тип для тарифов (пригодится для будущего раздела настроек)
-export interface Tariff {
+export interface PropertyCategory {
   id: string
-  category: CounterType
+  name: string     // "Квартира в Москве"
+  slug: string     // "moscow_flat"
+  created_at?: string
+}
+
+export interface CategoryTariff {
+  id: string
+  category_id: string
+  counter_type: CounterType
   price: number
-  valid_from: string
+  valid_from: string // Дата, с которой начинает действовать тариф
+  created_at?: string
+}
+
+export interface Property {
+  id: string
+  name: string
+  address: string
+  activeCounters: CounterType[]
+  category_id: string // Связь с динамической категорией в БД
+  user_id: string     // Владелец объекта
+}
+
+export type Reading = ReadingFormValues & {
+  id: string
+  property_id: string
+  created_at?: string
 }

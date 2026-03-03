@@ -6,6 +6,7 @@ import { type PropertyFormValues } from '../schemas/propertySchema'
 
 import { dataService } from '../lib/dataService'
 import type { CounterType } from '../mocks/fixtures'
+import { SHARED_INPUT_STYLES } from '../lib/constants'
 
 const COUNTER_LABELS: Record<string, string> = {
   elec_t1: 'Электроэнергия T1',
@@ -19,7 +20,7 @@ export function PropertyEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(!!id)
-  
+
   const {
     register,
     handleSubmit,
@@ -67,9 +68,9 @@ export function PropertyEditPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div>
           <label className="block text-sm font-medium mb-1">Название (например, Дача или Квартира)</label>
-          <input 
-            {...register('name', { required: true })} 
-            className="w-full px-4 py-2 rounded-xl border dark:bg-slate-900" 
+          <input
+            {...register('name', { required: true })}
+            className="w-full px-4 py-2 rounded-xl border dark:bg-slate-900"
             placeholder="Моя квартира"
           />
           {errors.name && (
@@ -79,11 +80,21 @@ export function PropertyEditPage() {
 
         <div>
           <label className="block text-sm font-medium mb-1">Адрес</label>
-          <input 
-            {...register('address')} 
-            className="w-full px-4 py-2 rounded-xl border dark:bg-slate-900" 
+          <input
+            {...register('address')}
+            className="w-full px-4 py-2 rounded-xl border dark:bg-slate-900"
             placeholder="ул. Пушкина, д. 10"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-500 mb-1">
+            Тип объекта (тарифная сетка)
+          </label>
+          <select name="category" className={SHARED_INPUT_STYLES}>
+            <option value="moscow_flat">Квартира (Москва)</option>
+            <option value="mo_cottage">Дачный участок (Московская обл.)</option>
+          </select>
         </div>
 
         <div>
@@ -91,9 +102,9 @@ export function PropertyEditPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.entries(COUNTER_LABELS).map(([key, label]) => (
               <label key={key} className="flex items-center p-3 rounded-xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors">
-                <input 
-                  type="checkbox" 
-                  value={key} 
+                <input
+                  type="checkbox"
+                  value={key}
                   {...register('activeCounters')}
                   className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mr-3"
                 />
