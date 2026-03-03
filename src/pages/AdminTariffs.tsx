@@ -131,7 +131,7 @@ export function AdminTariffs() {
                     onChange={e => setNewPrices(prev => ({ ...prev, [type]: { ...prev[type]!, date: e.target.value, price: prev[type]?.price || '' } }))}
                     className={SHARED_INPUT_STYLES}
                   />
-                  <button 
+                  <button
                     onClick={() => handleAddTariff(type)}
                     disabled={!newPrices[type]?.price || !newPrices[type]?.date}
                     className='bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white p-2 rounded-xl transition-all'
@@ -151,7 +151,7 @@ export function AdminTariffs() {
                       <span className='text-sm font-bold dark:text-white'>{t.price.toFixed(2)} ₽</span>
                       <span className='text-[10px] text-slate-500'>Действует с {formatDate(t.valid_from)}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDelete(t.id)}
                       className='p-2 text-slate-300 hover:text-red-500 transition-colors'
                     >

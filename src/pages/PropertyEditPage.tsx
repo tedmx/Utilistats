@@ -31,13 +31,13 @@ export function PropertyEditPage() {
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true)
-      
+
       // 1. Загружаем категории для селекта
       const { data: catData } = await supabase
         .from('property_categories')
         .select('*')
         .order('name')
-      
+
       if (catData) setCategories(catData)
 
       // 2. Если это редактирование, загружаем данные объекта
@@ -61,7 +61,6 @@ export function PropertyEditPage() {
     loadInitialData()
   }, [id, setValue])
 
-  
   const onSubmit = async (data: PropertyFormValues) => {
     try {
       const payload = {
@@ -72,12 +71,12 @@ export function PropertyEditPage() {
         user_id: (await supabase.auth.getUser()).data.user?.id // Привязываем к юзеру
       }
 
-      const { error } = id 
+      const { error } = id
         ? await supabase.from('properties').update(payload).eq('id', id)
         : await supabase.from('properties').insert([payload])
 
       if (error) throw error
-      
+
       navigate('/')
     } catch (err) {
       alert('Ошибка при сохранении')
@@ -119,7 +118,7 @@ export function PropertyEditPage() {
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-500 mb-1">
             Тип объекта (тарифная сетка)
           </label>
-          <select 
+          <select
             {...register('category_id', { required: 'Выберите категорию' })}
             className={SHARED_INPUT_STYLES}
           >

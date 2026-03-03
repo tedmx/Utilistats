@@ -23,6 +23,9 @@ export default defineConfig([
     },
     rules: {
       'semi': ['error', 'never'],
+      "indent": ["error", 2],
+      "no-trailing-spaces": "error",
+      "no-multiple-empty-lines": ["error", { "max": 1 }],
     },
   },
 ])

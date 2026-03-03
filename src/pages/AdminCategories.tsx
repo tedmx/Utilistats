@@ -12,7 +12,7 @@ export function AdminCategories() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newCategory, setNewCategory] = useState({ name: '', slug: '' })
-  
+
   // Добавляем счетчик для принудительного обновления списка
   const [refreshTick, setRefreshTick] = useState(0)
 
@@ -37,8 +37,8 @@ export function AdminCategories() {
     const { error } = await supabase
       .from('property_categories')
       .insert([
-        { 
-          name: newCategory.name, 
+        {
+          name: newCategory.name,
           slug: newCategory.slug.toUpperCase() // Приводим к верхнему регистру для единообразия
         }
       ])
@@ -58,7 +58,7 @@ export function AdminCategories() {
           <h1 className="text-2xl font-bold dark:text-white">Категории недвижимости</h1>
           <p className="text-slate-500 text-sm">Управление глобальными типами объектов и их тарифами</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
         >
@@ -114,7 +114,7 @@ export function AdminCategories() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-black mb-6 dark:text-white tracking-tight">Новая категория</h2>
-            
+
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Название (человеческое)</label>
@@ -144,13 +144,13 @@ export function AdminCategories() {
             </div>
 
             <div className="flex gap-3 mt-8">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="flex-1 px-4 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
               >
                 Отмена
               </button>
-              <button 
+              <button
                 onClick={handleCreateCategory}
                 disabled={!newCategory.name || !newCategory.slug}
                 className="flex-1 px-4 py-3 rounded-2xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:grayscale active:scale-95"
