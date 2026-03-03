@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard'
 import { PropertyPage } from './pages/PropertyPage'
 import { PropertyEditPage } from './pages/PropertyEditPage'
 import { AdminCategories } from './pages/AdminCategories'
+import { AdminTariffs } from './pages/AdminTariffs'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/property/:id/edit" element={<PropertyEditPage />} />
 
           <Route path="/admin/categories" element={<AdminCategories />} />
+          <Route path="/admin/categories/:categoryId/tariffs" element={<AdminTariffs />} />
         </Route>
 
         {/* 3. Редирект для несуществующих страниц */}
