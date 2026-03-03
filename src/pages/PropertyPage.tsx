@@ -1,21 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { TrashIcon } from 'lucide-react'
 
-import { Modal } from '../components/ui/Modal'
+import { ReadingsTable } from '../components/ReadingsTable'
+
 import { supabase } from '../lib/supabase'
-import { cn, formatDate, getProjectedReading, getTariffForDate } from '../lib/utils'
+import { cn } from '../lib/utils'
 import { dataService } from '../lib/dataService'
 import { readingSchema } from '../schemas/readingSchema'
 
 import type { ReadingFormValues } from '../schemas/readingSchema'
-import type { CounterType, Property } from '../mocks/fixtures'
 import type { Resolver } from 'react-hook-form'
-
-type Reading = ReadingFormValues & { id: string }
+import type { Reading, Property, CounterType } from '../types'
+import { EditReadingModal } from '../components/EditReadingModal'
+import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 
 const COUNTER_LABELS: Record<string, string> = {
   elec_t1: 'Электроэнергия T1',
@@ -229,7 +229,7 @@ export function PropertyPage() {
 
   if (loading) {
     return (
-      <div className='flex flex-col items-center justify-center min-h-[400px] space-y-4'>
+      <div className='flex flex-col items-center justify-center min-h-100 space-y-4'>
         <div className='w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin'></div>
         <p className='text-slate-500 animate-pulse'>Загружаем данные из облака...</p>
       </div>
@@ -322,221 +322,31 @@ export function PropertyPage() {
               Пока нет ни одной записи
             </div>
           ) : (
-            <div className='lg:col-span-3 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm'>
-              <table className='w-full text-left border-collapse min-w-[1000px]'>
-                <thead className='bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700'>
-                  {/* Первый уровень заголовков: Ресурсы */}
-                  <tr>
-                    <th className='px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider sticky left-0 bg-white dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700'>
-                      Период
-                    </th>
-                    {property.activeCounters.map((counter) => (
-                      <th
-                        key={counter}
-                        colSpan={3}
-                        className='px-4 py-4 text-center text-xs font-bold text-slate-500 uppercase border-l border-slate-200 dark:border-slate-700'
-                      >
-                        {counter.replace('_', ' ')}
-                      </th>
-                    ))}
-                    <th className='px-4 py-4 text-right'></th>
-                  </tr>
-                  {/* Второй уровень: Типы данных */}
-                  <tr className='border-t border-slate-200 dark:border-slate-700'>
-                    <th className='px-6 py-2 sticky left-0 bg-white dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700'></th>
-                    {property.activeCounters.map((counter) => (
-                      <React.Fragment key={`${counter}-sub`}>
-                        <th className='px-4 py-2 text-[10px] font-bold text-slate-400 border-l border-slate-200 dark:border-slate-700'>
-                          Тек.
-                        </th>
-                        <th className='px-4 py-2 text-[10px] font-bold text-slate-400'>Δ</th>
-                        <th className='px-4 py-2 text-[10px] font-bold text-blue-500'>₽</th>
-                      </React.Fragment>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-slate-100 dark:divide-slate-800'>
-                  {/* Виртуальная строка прогноза */}
-                  <tr className='bg-blue-50/30 dark:bg-blue-900/10 italic'>
-                    <td className='px-6 py-4 text-sm font-medium sticky left-0 bg-blue-50 dark:bg-slate-900 z-10 border-r border-slate-200 dark:border-slate-700'>
-                      <div className='flex flex-col'>
-                        <span>{formatDate(new Date().toString())}</span>
-                        <span className='text-[10px] text-blue-500 font-bold not-italic'>
-                          ПРОГНОЗ НА СЕГОДНЯ
-                        </span>
-                      </div>
-                    </td>
-                    {property.activeCounters.map((counter) => {
-                      const projection = getProjectedReading(readings, counter)
-                      const tariff = getTariffForDate(
-                        counter,
-                        new Date().toISOString().split('T')[0]
-                      )
-                      const cost = projection ? Number(projection.delta) * tariff : 0
-
-                      return (
-                        <React.Fragment key={`projected-${counter}`}>
-                          <td className='px-4 py-4 text-sm border-l border-slate-100 dark:border-slate-800 opacity-60'>
-                            {projection?.value || '—'}
-                          </td>
-                          <td className='px-4 py-4 text-sm opacity-60'>
-                            {projection ? `+${projection.delta}` : '—'}
-                          </td>
-                          <td className='px-4 py-4 text-sm font-bold text-blue-600/60'>
-                            {cost > 0 ? `${cost.toFixed(2)}` : '—'}
-                          </td>
-                        </React.Fragment>
-                      )
-                    })}
-                  </tr>
-
-                  {readings.map((r, idx) => (
-                    <tr
-                      key={r.id}
-                      className='hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors'
-                    >
-                      <td
-                        className='px-6 py-4 text-sm font-bold whitespace-nowrap sticky left-0 bg-white dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700 cursor-pointer group transition-colors'
-                        onClick={() => setEditingReading(r)} // Открываем попап редактирования всей строки
-                      >
-                        <div className='flex items-center gap-2'>
-                          <span className='dark:text-white'>{formatDate(r.date)}</span>
-                          <span className='text-[10px] font-medium transition-opacity opacity-0 group-hover:opacity-100 text-slate-400 dark:text-blue-400/80'>
-                            ред.
-                          </span>
-                        </div>
-                      </td>
-                      {property.activeCounters.map((counter) => {
-                        const currentVal = r[counter] || 0
-                        const prevVal = readings[idx - 1]?.[counter] || 0
-                        const diff = idx === 0 ? 0 : currentVal - prevVal
-                        const tariff = getTariffForDate(counter, r.date)
-                        const sum = diff * tariff
-
-                        return (
-                          <React.Fragment key={`${r.id}-${counter}`}>
-                            <td className='px-4 py-4 text-sm border-l border-slate-100 dark:border-slate-800'>
-                              {currentVal}
-                            </td>
-                            <td
-                              className={cn(
-                                'px-4 py-4 text-sm transition-all duration-500 border-l border-slate-100 dark:border-slate-800/50',
-                                getHeatmapStyles(diff, counter) // Наша подсветка
-                              )}
-                            >
-                              <div className='flex flex-col'>
-                                <span className='text-base'>
-                                  {diff > 0 ? `+${diff.toFixed(0)}` : '0'}
-                                </span>
-                              </div>
-                            </td>
-                            <td className='px-4 py-4 text-sm font-bold text-slate-900 dark:text-white'>
-                              {sum > 0 ? `${sum.toFixed(2)}` : '—'}
-                            </td>
-                          </React.Fragment>
-                        )
-                      })}
-                      <td className='px-4 py-4 text-right'>
-                        <button
-                          onClick={() => setReadingToDelete(r.id)}
-                          className='p-2 text-slate-400 hover:text-red-500 transition-colors'
-                        >
-                          <TrashIcon className='w-5 h-5' /> {/* Можно взять из Lucide-React */}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ReadingsTable
+              readings={readings}
+              property={property}
+              counterLabels={COUNTER_LABELS}
+              onEdit={setEditingReading}
+              onDelete={setReadingToDelete}
+              getHeatmapStyles={getHeatmapStyles}
+            />
           )}
         </div>
       </div>
 
-      {/* Попап удаления */}
-      <Modal
+      <EditReadingModal
+        isOpen={!!editingReading}
+        reading={editingReading}
+        property={property}
+        onClose={() => setEditingReading(null)}
+        onSave={handleUpdate}
+      />
+
+      <DeleteConfirmModal
         isOpen={!!readingToDelete}
         onClose={() => setReadingToDelete(null)}
-        title='Удалить запись?'
-      >
-        <div className='space-y-6'>
-          <p className='text-slate-500 dark:text-slate-400'>
-            Это действие нельзя будет отменить. Показания за эту дату будут безвозвратно удалены.
-          </p>
-          <div className='flex gap-3'>
-            <button
-              onClick={handleDelete}
-              className='flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors'
-            >
-              Да, удалить
-            </button>
-            <button
-              onClick={() => setReadingToDelete(null)}
-              className='flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white py-3 rounded-xl font-medium transition-colors'
-            >
-              Отмена
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Попап редактирования */}
-      <Modal
-        isOpen={!!editingReading}
-        onClose={() => setEditingReading(null)}
-        title='Редактирование записи'
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const formData = new FormData(e.currentTarget)
-            const updated = Object.fromEntries(formData.entries())
-            handleUpdate(updated as Partial<Reading>)
-          }}
-          className='space-y-4'
-        >
-          <div>
-            <label className='block text-xs font-bold text-slate-400 uppercase mb-1'>Дата</label>
-            <input
-              name='date'
-              type='date'
-              defaultValue={editingReading?.date}
-              className={inputStyles}
-            />
-          </div>
-
-          {property.activeCounters.map((counter) => (
-            <div key={counter}>
-              <label className='block text-xs font-bold text-slate-400 uppercase mb-1'>
-                {COUNTER_LABELS[counter]}
-              </label>
-              <input
-                name={counter}
-                type='number'
-                step='0.01'
-                defaultValue={editingReading?.[counter]}
-                className={inputStyles}
-              />
-            </div>
-          ))}
-
-          <div className='flex gap-3 pt-4'>
-            <button
-              type='submit'
-              className='flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-colors'
-            >
-              Сохранить
-            </button>
-            <button
-              type='button'
-              onClick={() => setEditingReading(null)}
-              className='flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white py-3 rounded-xl font-medium transition-colors'
-            >
-              Отмена
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
