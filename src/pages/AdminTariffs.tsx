@@ -1,52 +1,46 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft, Plus, Trash2, History } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { supabase } from '../lib/supabase'
-import { COUNTER_LABELS, COUNTER_UNITS, SHARED_INPUT_STYLES } from '../lib/constants'
-import { formatDate } from '../lib/utils'
+import { supabase } from '@/lib/supabase'
+import { COUNTER_LABELS, COUNTER_UNITS, SHARED_INPUT_STYLES } from '@/lib/constants'
+import { formatDate } from '@/lib/utils'
 
-import type { CategoryTariff, PropertyCategory, CounterType } from '../types'
+import type { CategoryTariff, PropertyCategory, CounterType } from '@/types'
 
 export function AdminTariffs() {
   const { categoryId } = useParams()
-  const [category, setCategory] = useState<PropertyCategory | null>(null)
-  const [tariffs, setTariffs] = useState<CategoryTariff[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const queryClient = useQueryClient()
 
-  // Состояние для формы добавления
-  const [newPrices, setNewPrices] = useState<Partial<Record<CounterType, { price: string, date: string }>>>({})
-
-  const fetchData = useCallback(async () => {
-    if (!categoryId) return
-
-    const [catRes, tariffRes] = await Promise.all([
-      supabase.from('property_categories').select('*').eq('id', categoryId).single(),
-      supabase.from('category_tariffs').select('*').eq('category_id', categoryId).order('valid_from', { ascending: false })
-    ])
-
-    if (catRes.data) setCategory(catRes.data)
-    if (tariffRes.data) setTariffs(tariffRes.data)
-    setIsLoading(false)
-  }, [categoryId])
-
-  useEffect(() => {
-    // В общем это копия fetchData.
-    // На этот шаг пришлось идти из-за жалоб линтера.
-    const loadData = async () => {
-      if (!categoryId) return
-
+  // Загружаем данные одним хуком
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin_tariffs', categoryId],
+    queryFn: async () => {
       const [catRes, tariffRes] = await Promise.all([
         supabase.from('property_categories').select('*').eq('id', categoryId).single(),
         supabase.from('category_tariffs').select('*').eq('category_id', categoryId).order('valid_from', { ascending: false })
       ])
 
-      if (catRes.data) setCategory(catRes.data)
-      if (tariffRes.data) setTariffs(tariffRes.data)
-      setIsLoading(false)
-    }
-    loadData()
-  }, [categoryId])
+      if (catRes.error) throw catRes.error
+      if (tariffRes.error) throw tariffRes.error
+
+      return {
+        category: catRes.data as PropertyCategory,
+        tariffs: tariffRes.data as CategoryTariff[]
+      }
+    },
+    enabled: !!categoryId // Запрос не пойдет, пока нет ID в урле
+  })
+
+  // Для удобства извлекаем данные
+  const category = data?.category
+  const tariffs = useMemo(() => {
+    return data?.tariffs || []
+  }, [data?.tariffs])
+
+  // Состояние для формы добавления
+  const [newPrices, setNewPrices] = useState<Partial<Record<CounterType, { price: string, date: string }>>>({})
 
   const groupedTariffs = useMemo(() => {
     const groups: Record<string, CategoryTariff[]> = {}
@@ -57,27 +51,46 @@ export function AdminTariffs() {
     return groups
   }, [tariffs])
 
-  const handleAddTariff = async (type: CounterType) => {
+  type NewTariffPayload = Omit<CategoryTariff, 'id' | 'created_at'>
+  const addTariffMutation = useMutation({
+    mutationFn: async (payload: NewTariffPayload) => {
+      const { error } = await supabase.from('category_tariffs').insert([payload])
+      if (error) throw error
+    },
+    onSuccess: () => {
+      // Сообщаем Query, что данные для этого categoryId устарели
+      queryClient.invalidateQueries({ queryKey: ['admin_tariffs', categoryId] })
+      // Очистку полей newPrices сделаем в обработчике кнопки
+    }
+  })
+
+  const deleteTariffMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('category_tariffs').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin_tariffs', categoryId] })
+    }
+  })
+
+  const handleAdd = (type: CounterType) => {
     const data = newPrices[type]
     if (!data?.price || !data?.date) return
 
-    const { error } = await supabase.from('category_tariffs').insert({
-      category_id: categoryId,
+    const payload: NewTariffPayload = {
+      category_id: categoryId as string,
       counter_type: type,
       price: parseFloat(data.price),
       valid_from: data.date
-    })
-
-    if (!error) {
-      setNewPrices(prev => ({ ...prev, [type]: { price: '', date: '' } }))
-      fetchData()
     }
-  }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Удалить этот тариф?')) return
-    const { error } = await supabase.from('category_tariffs').delete().eq('id', id)
-    if (!error) fetchData()
+    addTariffMutation.mutate(payload, {
+      onSuccess: () => {
+        // Очищаем инпуты только после успеха
+        setNewPrices(prev => ({ ...prev, [type]: { price: '', date: '' } }))
+      }
+    })
   }
 
   if (isLoading) return <div className='p-8 text-center text-slate-500'>Загрузка тарифов...</div>
@@ -118,7 +131,13 @@ export function AdminTariffs() {
                   step='0.01'
                   placeholder='0.00'
                   value={newPrices[type]?.price || ''}
-                  onChange={e => setNewPrices(prev => ({ ...prev, [type]: { ...prev[type]!, price: e.target.value, date: prev[type]?.date || '' } }))}
+                  onChange={e => setNewPrices(prev => ({
+                    ...prev,
+                    [type]: {
+                      price: e.target.value,
+                      date: prev[type]?.date || ''
+                    }
+                  }))}
                   className={SHARED_INPUT_STYLES}
                 />
               </div>
@@ -128,11 +147,17 @@ export function AdminTariffs() {
                   <input
                     type='date'
                     value={newPrices[type]?.date || ''}
-                    onChange={e => setNewPrices(prev => ({ ...prev, [type]: { ...prev[type]!, date: e.target.value, price: prev[type]?.price || '' } }))}
+                    onChange={e => setNewPrices(prev => ({
+                      ...prev,
+                      [type]: {
+                        date: e.target.value,
+                        price: prev[type]?.price || ''
+                      }
+                    }))}
                     className={SHARED_INPUT_STYLES}
                   />
                   <button
-                    onClick={() => handleAddTariff(type)}
+                    onClick={() => handleAdd(type)}
                     disabled={!newPrices[type]?.price || !newPrices[type]?.date}
                     className='bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white p-2 rounded-xl transition-all'
                   >
@@ -152,7 +177,12 @@ export function AdminTariffs() {
                       <span className='text-[10px] text-slate-500'>Действует с {formatDate(t.valid_from)}</span>
                     </div>
                     <button
-                      onClick={() => handleDelete(t.id)}
+                      onClick={() => {
+                        if (confirm('Удалить этот тариф?')) {
+                          deleteTariffMutation.mutate(t.id)
+                        }
+                      }}
+                      disabled={deleteTariffMutation.isPending}
                       className='p-2 text-slate-300 hover:text-red-500 transition-colors'
                     >
                       <Trash2 className='w-4 h-4' />

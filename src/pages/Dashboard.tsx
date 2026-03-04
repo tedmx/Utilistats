@@ -21,9 +21,12 @@ export function Dashboard() {
           <h1 className='text-3xl font-bold tracking-tight'>Мои объекты</h1>
           <p className='text-slate-500 mt-2'>Управление недвижимостью и показаниями счетчиков</p>
         </div>
-        <button className='bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm active:scale-95'>
+        <Link
+          to='/property/new'
+          className='flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all'
+        >
           + Добавить объект
-        </button>
+        </Link>
       </div>
 
       {/* Сетка объектов */}

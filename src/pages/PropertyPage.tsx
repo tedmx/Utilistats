@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -38,6 +38,8 @@ export function PropertyPage() {
   const [editingReading, setEditingReading] = useState<Reading | null>(null)
   const [readingToDelete, setReadingToDelete] = useState<string | null>(null)
   const [categoryTariffs, setCategoryTariffs] = useState<CategoryTariff[]>([])
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     const initPage = async () => {
@@ -91,7 +93,6 @@ export function PropertyPage() {
       const { data: tariffData } = await supabase
         .from('category_tariffs')
         .select('*')
-        // .eq('category_id', property.category_id)
 
       if (tariffData) setCategoryTariffs(tariffData)
     }
@@ -262,8 +263,8 @@ export function PropertyPage() {
           <h1 className='text-3xl font-extrabold tracking-tight'>{property.name}</h1>
           <p className='text-slate-500'>{property.address}</p>
           <button
-            onClick={() => {/* Открыть модалку редактирования объекта */ }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-bold"
+            onClick={() => navigate(`/property/${id}/edit`)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-bold mt-6"
           >
             <Settings2 className="w-5 h-5" />
             Настроить объект

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Plus, ChevronRight, Settings, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { supabase } from '../lib/supabase'
 import { SHARED_INPUT_STYLES } from '../lib/constants'
@@ -8,48 +9,43 @@ import { SHARED_INPUT_STYLES } from '../lib/constants'
 import type { PropertyCategory } from '../types'
 
 export function AdminCategories() {
-  const [categories, setCategories] = useState<PropertyCategory[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [newCategory, setNewCategory] = useState({ name: '', slug: '' })
+  const queryClient = useQueryClient() // Понадобится позже для обновления
 
-  // Добавляем счетчик для принудительного обновления списка
-  const [refreshTick, setRefreshTick] = useState(0)
-
-  // Загрузка данных при входе или при обновлении тика
-  useEffect(() => {
-    const fetchCategories = async () => {
+  const { data: categories = [], isLoading } = useQuery({
+    queryKey: ['property_categories'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('property_categories')
         .select('*')
         .order('name')
 
-      if (!error) setCategories(data)
-      setLoading(false)
+      if (error) throw error
+      return data as PropertyCategory[]
     }
-    fetchCategories()
-  }, [refreshTick])
+  })
 
-  // Функция для создания категории
-  const handleCreateCategory = async () => {
-    if (!newCategory.name || !newCategory.slug) return
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [newCategory, setNewCategory] = useState({ name: '', slug: '' })
 
-    const { error } = await supabase
-      .from('property_categories')
-      .insert([
-        {
-          name: newCategory.name,
-          slug: newCategory.slug.toUpperCase() // Приводим к верхнему регистру для единообразия
-        }
-      ])
+  const createCategoryMutation = useMutation({
+    mutationFn: async (newCat: { name: string; slug: string }) => {
+      const { error } = await supabase
+        .from('property_categories')
+        .insert([{ name: newCat.name, slug: newCat.slug.toUpperCase() }])
 
-    if (!error) {
+      if (error) throw error
+    },
+    onSuccess: () => {
+      // Инвалидируем кеш, чтобы список категорий перекачался автоматически
+      queryClient.invalidateQueries({ queryKey: ['property_categories'] })
+
       setIsModalOpen(false)
       setNewCategory({ name: '', slug: '' })
-      // Тикаем счетчик, чтобы вызвать useEffect и обновить список
-      setRefreshTick(prev => prev + 1)
+    },
+    onError: (error) => {
+      alert('Ошибка при создании: ' + error.message)
     }
-  }
+  })
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -67,7 +63,7 @@ export function AdminCategories() {
         </button>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           <p className="text-sm font-medium">Загрузка категорий...</p>
@@ -151,11 +147,11 @@ export function AdminCategories() {
                 Отмена
               </button>
               <button
-                onClick={handleCreateCategory}
-                disabled={!newCategory.name || !newCategory.slug}
+                onClick={() => createCategoryMutation.mutate(newCategory)}
+                disabled={!newCategory.name || !newCategory.slug || createCategoryMutation.isPending}
                 className="flex-1 px-4 py-3 rounded-2xl font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:grayscale active:scale-95"
               >
-                Создать
+                {createCategoryMutation.isPending ? 'Создание...' : 'Создать'}
               </button>
             </div>
           </div>
