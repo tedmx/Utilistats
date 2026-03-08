@@ -2,12 +2,12 @@ import { z } from 'zod'
 
 export const readingSchema = z.object({
   date: z.string().min(1, 'Выберите дату'),
-  
+
   // Электричество
   elec_t1: z.coerce
     .number({ message: 'Введите число' })
     .min(0, 'Показания не могут быть отрицательными'),
-  
+
   elec_t2: z.coerce
     .number()
     .min(0)
@@ -18,7 +18,7 @@ export const readingSchema = z.object({
   water_cold: z.coerce
     .number({ message: 'Введите число' })
     .min(0, 'Минимум 0'),
-    
+
   water_hot: z.coerce
     .number({ message: 'Введите число' })
     .min(0, 'Минимум 0')

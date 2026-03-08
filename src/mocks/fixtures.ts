@@ -18,7 +18,7 @@ export const MOCK_TARIFFS: Tariff[] = [
   { resource: 'elec_t1', price: 6.91, startDate: '2022-01-01' },
   { resource: 'elec_t1', price: 7.45, startDate: '2024-07-01' },
   { resource: 'elec_t1', price: 8.60, startDate: '2025-07-01' },
-  
+
   // Электроэнергия T2
   { resource: 'elec_t2', price: 2.62, startDate: '2022-01-01' },
   { resource: 'elec_t2', price: 3.02, startDate: '2024-07-01' },
@@ -41,17 +41,17 @@ export const MOCK_TARIFFS: Tariff[] = [
 ]
 
 export const MOCK_PROPERTIES: Property[] = [
-  { 
-    id: '1', 
-    name: 'Квартира на Пушкина', 
+  {
+    id: '1',
+    name: 'Квартира на Пушкина',
     address: 'ул. Пушкина, д. 10, кв. 42',
-    activeCounters: ['elec_t1', 'elec_t2', 'water_cold', 'water_hot'] 
+    activeCounters: ['elec_t1', 'elec_t2', 'water_cold', 'water_hot']
   },
-  { 
-    id: '2', 
-    name: 'Дача', 
+  {
+    id: '2',
+    name: 'Дача',
     address: 'СНТ "Ромашка", уч. 15',
-    activeCounters: ['water_cold', 'gas'] 
+    activeCounters: ['water_cold', 'gas']
   }
 ]
 
@@ -84,7 +84,7 @@ export const MOCK_READINGS = {
     { id: '210', date: '2025-10-01', elec_t1: 6830, elec_t2: 3435, water_hot: 112, water_cold: 181 },
     { id: '211', date: '2025-11-01', elec_t1: 6940, elec_t2: 3525, water_hot: 116, water_cold: 186 },
     { id: '212', date: '2025-12-01', elec_t1: 7050, elec_t2: 3615, water_hot: 120, water_cold: 191 },
-    
+
     // 2026 год
     { id: '301', date: '2026-01-01', elec_t1: 7160, elec_t2: 3705, water_hot: 124, water_cold: 196 },
     { id: '302', date: '2026-02-01', elec_t1: 7265, elec_t2: 3790, water_hot: 127, water_cold: 200 }
@@ -99,7 +99,7 @@ export const MOCK_READINGS = {
     { id: 'd6', date: '2024-10-01', water_cold: 116, gas: 1750 }, // Октябрь: закрытие сезона воды, старт котла (+200 кубов)
     { id: 'd7', date: '2024-11-01', water_cold: 116, gas: 2200 }, // Ноябрь: мороз (+450 кубов)
     { id: 'd8', date: '2024-12-01', water_cold: 116, gas: 2820 }, // Декабрь: пик зимы (+620 кубов — около 20/день)
-    
+
     // 2025 год
     { id: 'd9', date: '2025-01-01', water_cold: 116, gas: 3440 }, // Январь: мороз
     { id: 'd10', date: '2025-02-01', water_cold: 116, gas: 4000 }, // Февраль

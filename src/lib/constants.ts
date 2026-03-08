@@ -40,7 +40,7 @@ export const COUNTER_COLORS: Record<CounterType, string> = {
  * Стили для инпутов, которые мы раньше дублировали в компонентах.
  * Теперь их можно импортировать одной строкой.
  */
-export const SHARED_INPUT_STYLES = 
+export const SHARED_INPUT_STYLES =
   'w-full px-4 py-2 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-blue-500 ' +
   'border-slate-200 bg-white text-slate-900 ' +
   'dark:border-slate-700 dark:bg-slate-900 dark:text-white'
