@@ -8,7 +8,7 @@ import { EditReadingModal } from '../components/EditReadingModal'
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
 import { ReadingsTable } from '../components/ReadingsTable'
 
-import { cn } from '../lib/utils'
+import { calculateDailyConsumption, cn } from '../lib/utils'
 import { dataService } from '../lib/dataService'
 
 import type { Reading, CounterType, PropertySettings, } from '../types'
@@ -49,36 +49,41 @@ export function PropertyPage() {
 
   const counterStats = useMemo(() => {
     const result: Record<string, { min: number; max: number }> = {}
-    if (!property) return result
+    if (!property || readings.length === 0) return result
 
     property.activeCounters.forEach((counter: CounterType) => {
-      const deltas = readings
+      // Рассчитываем суточное потребление для каждой записи
+      const dailyValues = readings
         .map((r, i) => {
-          if (i === 0) return 0
-          const curr = r[counter] || 0
-          const prev = readings[i - 1][counter] || 0
-          return curr - prev
-        })
-        .filter((d) => d > 0)
+          if (i === 0) return 0 // Для первой записи дельта 0
 
-      if (deltas.length > 0) {
+          const currentVal = (r[counter] as number) || 0
+          const prevReading = readings[i - 1]
+          const prevVal = (prevReading?.[counter] as number) || 0
+
+          // Используем ту же утилиту, что и в таблице
+          return calculateDailyConsumption(currentVal, prevVal, r.date, prevReading.date)
+        })
+        .filter((v) => v > 0)
+
+      if (dailyValues.length > 0) {
         result[counter] = {
-          min: Math.min(...deltas),
-          max: Math.max(...deltas),
+          min: Math.min(...dailyValues),
+          max: Math.max(...dailyValues),
         }
       }
     })
     return result
   }, [readings, property])
 
-  const getHeatmapStyles = (currentDiff: number, counter: string) => {
-    if (currentDiff <= 0) return ''
+  const getHeatmapStyles = (dailyValue: number, counter: string) => {
+    if (dailyValue <= 0) return ''
 
     const stats = counterStats[counter]
     if (!stats || stats.max === stats.min) return 'bg-blue-100/10'
 
     // Вычисляем относительное положение: 0 — это минимум, 1 — это максимум
-    const ratio = (currentDiff - stats.min) / (stats.max - stats.min)
+    const ratio = (dailyValue - stats.min) / (stats.max - stats.min)
 
     let bgClass = ''
     let textClass = 'text-slate-900 dark:text-slate-100'

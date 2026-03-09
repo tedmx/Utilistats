@@ -154,7 +154,7 @@ export function ReadingsTable({
                       <td
                         className={cn(
                           'px-2 py-4 text-sm border-l border-slate-100 dark:border-slate-800 text-center',
-                          getHeatmapStyles(diff, counter)
+                          getHeatmapStyles(daily, counter)
                         )}
                       >
                         {currentVal}
@@ -162,7 +162,7 @@ export function ReadingsTable({
                       <td
                         className={cn(
                           'px-2 py-2 text-sm border-l border-slate-100 dark:border-slate-800/50 text-center',
-                          getHeatmapStyles(diff, counter)
+                          getHeatmapStyles(daily, counter)
                         )}
                       >
                         {diff > 0 ? `+${diff.toFixed(2)}` : '0'}
@@ -171,7 +171,7 @@ export function ReadingsTable({
                         <td
                           className={cn(
                             'px-2 py-4 text-sm border-l border-slate-100 dark:border-slate-800/30 text-center text-slate-400 font-medium italic',
-                            getHeatmapStyles(diff, counter)
+                            getHeatmapStyles(daily, counter)
                           )}
                         >
                           {daily > 0 ? daily.toFixed(2) : '—'}
@@ -180,7 +180,7 @@ export function ReadingsTable({
                       <td
                         className={cn(
                           'px-2 py-4 text-sm font-bold text-slate-900 dark:text-white text-center',
-                          getHeatmapStyles(diff, counter)
+                          getHeatmapStyles(daily, counter)
                         )}
                       >
                         {sum > 0 ? `${sum.toFixed(2)}` : '—'}

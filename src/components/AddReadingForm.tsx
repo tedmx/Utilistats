@@ -27,7 +27,13 @@ export function AddReadingForm({ property, onSuccess }: AddReadingFormProps) {
   const onSubmit = async (data: ReadingFormValues) => {
     setIsSaving(true)
     try {
-      const { error } = await supabase.from('readings').insert([data])
+      // Объединяем данные формы с ID объекта
+      const payload = {
+        ...data,
+        property_id: property.id // Добавляем обязательную связь
+      }
+
+      const { error } = await supabase.from('readings').insert([payload])
       if (error) throw error
       reset()
       onSuccess()

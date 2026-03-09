@@ -30,6 +30,7 @@ export function EditReadingModal({
           e.preventDefault()
           const formData = new FormData(e.currentTarget)
           const updated = Object.fromEntries(formData.entries())
+          updated.id = reading.id
           await onSave(updated as Partial<Reading>)
         }}
         className='space-y-4'
