@@ -69,3 +69,20 @@ export const formatDate = (dateString: string) => {
     year: 'numeric',
   }).format(date)
 }
+
+export const calculateDailyConsumption = (
+  currentValue: number,
+  prevValue: number,
+  currentDate: string,
+  prevDate: string
+) => {
+  const diff = currentValue - prevValue
+  if (diff <= 0) return 0
+
+  const date1 = new Date(currentDate)
+  const date2 = new Date(prevDate)
+  const diffTime = Math.abs(date1.getTime() - date2.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  return diffDays > 0 ? diff / diffDays : 0
+}

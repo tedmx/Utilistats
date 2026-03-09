@@ -1,157 +1,51 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { Plus, Settings2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { ReadingsTable } from '../components/ReadingsTable'
-
-import { supabase } from '../lib/supabase'
-import { cn } from '../lib/utils'
-import { dataService } from '../lib/dataService'
-import { readingSchema } from '../schemas/readingSchema'
-
-import type { ReadingFormValues } from '../schemas/readingSchema'
-import type { Resolver } from 'react-hook-form'
-import type { Reading, Property, CounterType, CategoryTariff } from '../types'
 import { EditReadingModal } from '../components/EditReadingModal'
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal'
-import { Settings2 } from 'lucide-react'
+import { ReadingsTable } from '../components/ReadingsTable'
 
-const COUNTER_LABELS: Record<string, string> = {
-  elec_t1: 'Электроэнергия T1',
-  elec_t2: 'Электроэнергия T2',
-  water_cold: 'ХВС (Холодная вода)',
-  water_hot: 'ГВС (Горячая вода)',
-  gas: 'Газ',
-}
+import { cn } from '../lib/utils'
+import { dataService } from '../lib/dataService'
+
+import type { Reading, CounterType, PropertySettings, } from '../types'
+import { AddReadingForm } from '@/components/AddReadingForm'
+import { COUNTER_LABELS } from '@/lib/constants'
+import { TableSettingsPanel } from '@/components/TableSettingsPanel'
+
 export function PropertyPage() {
   const { id } = useParams()
-  const [isSaving, setIsSaving] = useState(false)
+  const queryClient = useQueryClient()
 
-  const [properties, setProperties] = useState<Property[]>([])
-  const property = useMemo(() => properties.find((p) => p.id === id), [properties, id])
-
-  const [readings, setReadings] = useState<Reading[]>([])
-  const [loading, setLoading] = useState(true)
-
+  const [isFormVisible, setIsFormVisible] = useState(false)
   const [editingReading, setEditingReading] = useState<Reading | null>(null)
   const [readingToDelete, setReadingToDelete] = useState<string | null>(null)
-  const [categoryTariffs, setCategoryTariffs] = useState<CategoryTariff[]>([])
 
-  const navigate = useNavigate()
+  const [localSettings, setLocalSettings] = useState<PropertySettings | null>(null)
 
-  useEffect(() => {
-    const initPage = async () => {
-      if (!id) return
-      setLoading(true)
-      try {
-        // Загружаем всё параллельно для скорости
-        const [props] = await Promise.all([
-          dataService.getProperties(),
-        ])
-        setProperties(props)
-
-        const readingsData = await dataService.getReadings(id)
-        setReadings(readingsData)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    initPage()
-  }, [id])
-
-  useEffect(() => {
-    const fetchReadings = async () => {
-      if (!id) return
-
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('readings')
-        .select('*')
-        .eq('property_id', id)
-        .order('date', { ascending: true }) // Важно для расчета Δ
-
-      if (error) {
-        console.error('Ошибка загрузки:', error.message)
-      } else {
-        setReadings(data || [])
-      }
-      setLoading(false)
-    }
-
-    fetchReadings()
-  }, [id])
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (!id || !property) return
-
-      // Загружаем тарифы для категории объекта
-      const { data: tariffData } = await supabase
-        .from('category_tariffs')
-        .select('*')
-
-      if (tariffData) setCategoryTariffs(tariffData)
-    }
-    loadData()
-  }, [id, property])
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ReadingFormValues>({
-    resolver: zodResolver(readingSchema) as Resolver<ReadingFormValues>,
+  const { data: properties = [] } = useQuery({
+    queryKey: ['properties'],
+    queryFn: dataService.getProperties
   })
 
-  const onSubmit = async (data: ReadingFormValues) => {
-    if (!id) return
-    setIsSaving(true)
+  const property = properties.find((p) => p.id === id)
 
-    try {
-      const newEntry = {
-        ...data,
-        property_id: id,
-        // Supabase сам создаст id (uuid), если настроено в таблице
-      }
+  // Запрос 2: Показания
+  const { data: readings = [], isLoading: isLoadingReadings } = useQuery({
+    queryKey: ['readings', id],
+    queryFn: () => dataService.getReadings(id!),
+    enabled: !!id,
+  })
 
-      const { data: insertedData, error } = await supabase
-        .from('readings')
-        .insert([newEntry])
-        .select()
-
-      if (error) throw error
-
-      if (insertedData) {
-        setReadings((prev) => {
-          const updated = [...prev, insertedData[0]]
-          return updated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        })
-        reset()
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        // Теперь TS знает, что у err есть свойство message
-        alert('Ошибка сохранения: ' + error.message)
-      } else {
-        // На случай, если выброшено что-то странное (не объект Error)
-        alert('Произошла неизвестная ошибка')
-      }
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  // Внутри компонента PropertyPage перед return
-  const inputStyles = cn(
-    'w-full px-4 py-2 rounded-xl border outline-none transition-all focus:ring-2 focus:ring-blue-500',
-    'border-slate-200 bg-white text-slate-900', // Light
-    'dark:border-slate-700 dark:bg-slate-900 dark:text-white' // Dark
-  )
+  // 3. Загрузка тарифов (только если есть property)
+  const { data: categoryTariffs = [] } = useQuery({
+    queryKey: ['tariffs', property?.category_id],
+    queryFn: () => dataService.getCategoryTariffs(property!.category_id!),
+    enabled: !!property?.category_id
+  })
 
   const counterStats = useMemo(() => {
     const result: Record<string, { min: number; max: number }> = {}
@@ -209,42 +103,55 @@ export function PropertyPage() {
     return cn(bgClass, textClass)
   }
 
-  // Функция обновления
-  const handleUpdate = async (updatedData: Partial<Reading>) => {
-    if (!editingReading) return
-    try {
-      const { error } = await supabase
-        .from('readings')
-        .update(updatedData)
-        .eq('id', editingReading.id)
-
-      if (error) throw error
-      // Обновляем локальный стейт
-      setReadings((prev) =>
-        prev.map((r) => (r.id === editingReading.id ? { ...r, ...updatedData } : r))
-      )
-      setEditingReading(null)
-    } catch (err) {
-      alert('Ошибка при обновлении')
-      console.error(err)
-    }
-  }
-
-  // Функция удаления
-  const handleDelete = async () => {
-    if (!readingToDelete) return
-    try {
-      const { error } = await supabase.from('readings').delete().eq('id', readingToDelete)
-      if (error) throw error
-      setReadings((prev) => prev.filter((r) => r.id !== readingToDelete))
+  // Мутация на удаление
+  const deleteMutation = useMutation({
+    mutationFn: (readingId: string) => dataService.deleteReading(readingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['readings', id] })
       setReadingToDelete(null)
-    } catch (err) {
-      alert('Ошибка при удалении')
-      console.error(err)
     }
+  })
+
+  // Мутация на обновление
+  const updateMutation = useMutation({
+    mutationFn: (reading: Partial<Reading> & { id: string }) => dataService.updateReading(reading),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['readings', id] })
+      setEditingReading(null)
+    }
+  })
+
+  const settingsMutation = useMutation({
+    mutationFn: (newSettings: PropertySettings) =>
+      dataService.updatePropertySettings(id!, newSettings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] })
+    },
+    onError: (err) => {
+      // Если вдруг ошибка — возвращаем как было и уведомляем
+      console.error('Не удалось сохранить настройки:', err)
+      setLocalSettings(property?.settings || defaultSettings)
+      alert('Ошибка сохранения настроек на сервере')
+    }
+  })
+
+  // Дефолтные настройки, если в БД еще пусто
+  const defaultSettings: PropertySettings = {
+    visibleCounters: (property?.activeCounters as CounterType[]) || [],
+    showDailyConsumption: false
   }
 
-  if (loading) {
+  const handleSettingsChange = (newSettings: PropertySettings) => {
+    // Сначала обновляем UI (мгновенно)
+    setLocalSettings(newSettings)
+
+    // Затем отправляем в БД фоном (не блокируя интерфейс)
+    settingsMutation.mutate(newSettings)
+  }
+
+  const displaySettings = localSettings || property?.settings || defaultSettings
+
+  if (isLoadingReadings) {
     return (
       <div className='flex flex-col items-center justify-center min-h-100 space-y-4'>
         <div className='w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin'></div>
@@ -252,111 +159,81 @@ export function PropertyPage() {
       </div>
     )
   }
-
   if (!property) return <div className='p-8 text-center'>Объект не найден</div>
 
   return (
-    <div className='space-y-8'>
-      {/* Шапка страницы объекта */}
-      <div className='flex flex-col md:flex-row md:items-center justify-between gap-4'>
-        <div>
-          <h1 className='text-3xl font-extrabold tracking-tight'>{property.name}</h1>
-          <p className='text-slate-500'>{property.address}</p>
+    <div className='max-w-7xl mx-auto px-4 py-8'>
+      {/* Header */}
+      <div className='flex items-center justify-between mb-8'>
+        <h1 className='text-3xl font-black dark:text-white tracking-tight'>
+          {property?.name || 'Загрузка...'}
+        </h1>
+
+        <div className='flex items-center gap-3'>
+          {/* Кнопка "Добавить показания" */}
           <button
-            onClick={() => navigate(`/property/${id}/edit`)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors font-bold mt-6"
+            onClick={() => setIsFormVisible(!isFormVisible)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all active:scale-95',
+              isFormVisible ? 'bg-slate-100 dark:bg-slate-800' : 'bg-blue-600 text-white'
+            )}
           >
-            <Settings2 className="w-5 h-5" />
-            Настроить объект
+            <Plus className={cn('w-5 h-5 transition-transform duration-300', isFormVisible && 'rotate-45')} />
+            <span>{isFormVisible ? 'Закрыть' : 'Добавить показания'}</span>
           </button>
+
+          {/* Основная кнопка настроек объекта */}
+          <Link
+            to={`/property/${id}/edit`}
+            className='fp-2 bg-slate-100 dark:bg-slate-800 rounded-xl'
+            title="Настройки объекта"
+          >
+            <Settings2 className='w-5 h-5 text-slate-500' />
+          </Link>
         </div>
       </div>
 
-      <div className='grid lg:grid-cols-3 gap-8'>
-        {/* Форма добавления */}
-        <div className='lg:col-span-1'>
-          <div
-            className={cn(
-              'p-6 rounded-3xl border shadow-sm sticky top-24 transition-colors',
-              'bg-white border-slate-200',
-              'dark:bg-slate-800 dark:border-slate-700'
-            )}
-          >
-            <h2 className='text-xl font-bold mb-6'>Новые показания</h2>
-            <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-slate-700 dark:text-slate-500 mb-1'>
-                  Дата
-                </label>
-                <input type='date' {...register('date')} className={inputStyles} />
-              </div>
+      {/* Новая форма */}
+      {isFormVisible && property && (
+        <AddReadingForm
+          property={property}
+          onSuccess={() => {
+            setIsFormVisible(false)
+            queryClient.invalidateQueries({ queryKey: ['readings', id] })
+          }}
+        />
+      )}
 
-              {/* Динамические поля на основе активных счетчиков объекта */}
-              {property.activeCounters.map((counter) => (
-                <div key={counter}>
-                  <label className='block text-sm font-medium text-slate-700 dark:text-slate-500 mb-1'>
-                    {COUNTER_LABELS[counter]}
-                  </label>
-                  <input
-                    type='number'
-                    step='0.01'
-                    {...register(counter)}
-                    placeholder='0.00'
-                    className={inputStyles}
-                  />
-                  {errors[counter] && (
-                    <p className='text-red-500 text-xs mt-1'>Ошибка в значении</p>
-                  )}
-                </div>
-              ))}
+      {property && (
+        <TableSettingsPanel
+          activeCounters={property.activeCounters as CounterType[]}
+          settings={displaySettings}
+          onSettingsChange={handleSettingsChange}
+          isUpdating={settingsMutation.isPending}
+        />
+      )}
 
-              <button
-                disabled={isSaving}
-                className={cn(
-                  'w-full py-3 rounded-xl font-bold transition-all active:scale-[0.98] mt-4 flex justify-center items-center',
-                  'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed',
-                  'dark:bg-blue-600 dark:hover:bg-blue-500'
-                )}
-              >
-                {isSaving ? (
-                  <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin' />
-                ) : (
-                  'Сохранить запись'
-                )}
-              </button>
-            </form>
+      {/* Таблица на всю ширину */}
+      <div className='space-y-4'>
+        <h2 className='text-xl font-bold dark:text-white'>История потребления</h2>
+        {isLoadingReadings ? (
+          <div className='space-y-4 animate-pulse'>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className='h-16 bg-slate-100 dark:bg-slate-800/50 rounded-2xl w-full' />
+            ))}
           </div>
-        </div>
-
-        {/* Список показаний */}
-        <div className='lg:col-span-2 space-y-4'>
-          <h2 className='text-xl font-bold dark:text-white'>История потребления</h2>
-          {loading ? (
-            // Заглушка (Skeleton), пока данные подгружаются
-            <div className='space-y-4 animate-pulse'>
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className='h-16 bg-slate-100 dark:bg-slate-800/50 rounded-2xl w-full'
-                />
-              ))}
-            </div>
-          ) : readings.length === 0 ? (
-            <div className='p-12 border-2 border-dashed border-slate-200 rounded-3xl text-center text-slate-400'>
-              Пока нет ни одной записи
-            </div>
-          ) : (
-            <ReadingsTable
-              readings={readings}
-              property={property}
-              counterLabels={COUNTER_LABELS}
-              onEdit={setEditingReading}
-              onDelete={setReadingToDelete}
-              getHeatmapStyles={getHeatmapStyles}
-              categoryTariffs={categoryTariffs}
-            />
-          )}
-        </div>
+        ) : (
+          <ReadingsTable
+            readings={readings}
+            property={property}
+            counterLabels={COUNTER_LABELS}
+            onEdit={setEditingReading}
+            onDelete={setReadingToDelete}
+            getHeatmapStyles={getHeatmapStyles}
+            categoryTariffs={categoryTariffs}
+            settings={displaySettings}
+          />
+        )}
       </div>
 
       <EditReadingModal
@@ -364,13 +241,31 @@ export function PropertyPage() {
         reading={editingReading}
         property={property}
         onClose={() => setEditingReading(null)}
-        onSave={handleUpdate}
+        onSave={async (data) => {
+          const {
+            id,
+          } = data
+          // Мы знаем, что при редактировании id обязан быть.
+          // Если по какой-то причине его нет, мутация не должна вызываться.
+          if (typeof id !== 'string') {
+            console.error("Попытка обновить запись без ID")
+            return
+          }
+          await updateMutation.mutateAsync({
+            ...data,
+            id,
+          })
+        }}
       />
 
       <DeleteConfirmModal
         isOpen={!!readingToDelete}
         onClose={() => setReadingToDelete(null)}
-        onConfirm={handleDelete}
+        onConfirm={async () => {
+          if (readingToDelete) {
+            await deleteMutation.mutateAsync(readingToDelete)
+          }
+        }}
       />
     </div>
   )

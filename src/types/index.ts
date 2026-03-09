@@ -33,10 +33,16 @@ export interface Property {
   activeCounters: CounterType[]
   category_id: string // Связь с динамической категорией в БД
   user_id: string     // Владелец объекта
+  settings?: PropertySettings; // Добавляем это
 }
 
 export type Reading = ReadingFormValues & {
   id: string
   property_id: string
   created_at?: string
+}
+
+export interface PropertySettings {
+  visibleCounters: CounterType[];
+  showDailyConsumption: boolean;
 }

@@ -7,12 +7,14 @@ import { supabase } from '../lib/supabase'
 
 import { type PropertyFormValues } from '../schemas/propertySchema'
 import type { CounterType, PropertyCategory } from '../types' // Импортируем типы
+import { useQueryClient } from '@tanstack/react-query'
 
 export function PropertyEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [categories, setCategories] = useState<PropertyCategory[]>([])
+  const queryClient = useQueryClient()
 
   const {
     register,
@@ -75,9 +77,10 @@ export function PropertyEditPage() {
         ? await supabase.from('properties').update(payload).eq('id', id)
         : await supabase.from('properties').insert([payload])
 
-      if (error) throw error
+      if (error) throw error // Сбрасываем кэш перед переходом
+      await queryClient.invalidateQueries({ queryKey: ['properties'] })
 
-      navigate('/')
+      navigate(`/property/${id}`)
     } catch (err) {
       alert('Ошибка при сохранении')
       console.error(err)

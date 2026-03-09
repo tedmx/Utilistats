@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 // import { MOCK_PROPERTIES, MOCK_READINGS } from '../mocks/fixtures'
-import type { Property } from '../types'
+import type { CategoryTariff, Property, PropertySettings, Reading } from '../types'
 
 const useSupabase = import.meta.env.VITE_USE_SUPABASE === 'true'
 
@@ -19,6 +19,7 @@ export const dataService = {
       activeCounters: p.active_counters || [], // Трансформация ключа
       category_id: p.category_id,
       user_id: p.user_id,
+      settings: p.settings,
     }))
   },
 
@@ -94,5 +95,46 @@ export const dataService = {
       if (error) throw error
       return data[0]
     }
+  },
+
+  async updateReading(reading: Partial<Reading> & { id: string }) {
+    const { data, error } = await supabase
+      .from('readings')
+      .update(reading)
+      .eq('id', reading.id)
+      .select()
+
+    if (error) throw error
+    return data[0]
+  },
+
+  async deleteReading(id: string) {
+    const { error } = await supabase
+      .from('readings')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  async getCategoryTariffs(categoryId: string): Promise<CategoryTariff[]> {
+    const { data, error } = await supabase
+      .from('category_tariffs')
+      .select('*')
+      .eq('category_id', categoryId)
+
+    if (error) throw error
+    return data
+  },
+
+  async updatePropertySettings(propertyId: string, settings: PropertySettings) {
+    const { data, error } = await supabase
+      .from('properties')
+      .update({ settings })
+      .eq('id', propertyId)
+      .select()
+
+    if (error) throw error
+    return data[0]
   }
 }
