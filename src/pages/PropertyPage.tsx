@@ -77,24 +77,28 @@ export function PropertyPage() {
   }, [readings, property])
 
   const getHeatmapStyles = (dailyValue: number, counter: string) => {
-    if (dailyValue <= 0) return ''
-
     const stats = counterStats[counter]
-    if (!stats || stats.max === stats.min) return 'bg-blue-100/10'
 
-    // Вычисляем относительное положение: 0 — это минимум, 1 — это максимум
+    // Базовые классы для всех ячеек, чтобы они не были прозрачными
+    // bg-white для светлой темы и bg-slate-900 (или ваш основной темный цвет) для темной
+    const baseClasses = 'bg-white dark:bg-slate-900 transition-colors'
+    let textClass = 'text-slate-900 dark:text-slate-100'
+    let bgClass = ''
+
+    // Если данных для сравнения нет или значение нулевое, возвращаем нейтральный фон
+    if (!stats || stats.max === stats.min || dailyValue <= 0) {
+      return cn(baseClasses, textClass)
+    }
+
     const ratio = (dailyValue - stats.min) / (stats.max - stats.min)
 
-    let bgClass = ''
-    let textClass = 'text-slate-900 dark:text-slate-100'
-
     if (ratio > 0.85) {
-      bgClass = 'bg-orange-500/60 dark:bg-orange-600/60' // Самый большой расход (140)
+      bgClass = 'bg-orange-500/60 dark:bg-orange-600/60'
       textClass = 'text-orange-950 dark:text-white font-black'
     } else if (ratio > 0.7) {
       bgClass = 'bg-orange-400/40 dark:bg-orange-500/40'
     } else if (ratio > 0.55) {
-      bgClass = 'bg-yellow-400/40 dark:bg-yellow-500/40' // Среднее (130)
+      bgClass = 'bg-yellow-400/40 dark:bg-yellow-500/40'
     } else if (ratio > 0.4) {
       bgClass = 'bg-yellow-300/30 dark:bg-yellow-500/25'
     } else if (ratio > 0.25) {
@@ -102,10 +106,10 @@ export function PropertyPage() {
     } else if (ratio > 0.1) {
       bgClass = 'bg-blue-200/15 dark:bg-blue-500/10'
     } else {
-      bgClass = 'bg-blue-100/10 dark:bg-blue-500/5' // Самый маленький расход (120)
+      bgClass = 'bg-blue-100/10 dark:bg-blue-500/5'
     }
 
-    return cn(bgClass, textClass)
+    return cn(baseClasses, bgClass, textClass)
   }
 
   // Мутация на удаление

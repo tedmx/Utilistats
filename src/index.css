@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
-body {
-  @apply bg-slate-50 text-slate-900;
+
+@theme {
+  /* Описываем ключевые кадры */
+  @keyframes aurora {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40%, 40%) scale(1.5); }
+    100% { transform: translate(-40%, 40%) scale(0.7); }
+  }
+
+  /* Регистрируем утилиты анимации */
+  --animate-aurora-slow: aurora 10s infinite alternate;
+  --animate-aurora-medium: aurora 10s infinite alternate-reverse;
+  --animate-aurora-fast: aurora 6s infinite alternate;
 }

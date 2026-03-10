@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  /* Описываем ключевые кадры */
+  @keyframes aurora {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(15%, 10%) scale(1.1); }
+    100% { transform: translate(-5%, 20%) scale(0.9); }
+  }
+
+  /* Регистрируем утилиты анимации */
+  --animate-aurora-slow: aurora 20s infinite alternate;
+  --animate-aurora-medium: aurora 15s infinite alternate-reverse;
+  --animate-aurora-fast: aurora 12s infinite alternate;
+}

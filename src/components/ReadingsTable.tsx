@@ -31,7 +31,7 @@ export function ReadingsTable({
 
   return (
     <div className='lg:col-span-3 overflow-x-auto rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm'>
-      <table className='w-full text-left border-collapse min-w-[600px] lg:min-w-[1000px]'>
+      <table className='w-full text-left border-collapse min-w-[400px] lg:min-w-[1000px]'>
         <thead className='bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700'>
           <tr>
             <th className='px-3 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider sticky left-0 bg-white dark:bg-slate-800 z-10 border-r border-slate-200 dark:border-slate-700 max-w-[100px] text-center'>

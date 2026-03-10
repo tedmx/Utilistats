@@ -5,6 +5,7 @@ import { cn } from '../lib/utils'
 import { dataService } from '../lib/dataService'
 import { LayoutGrid } from 'lucide-react'
 import { useAdmin } from '../hooks/useAdmin'
+import { BackgroundAurora } from '@/components/BackgroundAurora'
 
 export function Layout() {
   const location = useLocation()
@@ -29,7 +30,8 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      <BackgroundAurora />
       {/* Шапка приложения */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,8 +48,7 @@ export function Layout() {
               <nav className="hidden md:flex items-center gap-6">
                 <Link
                   to="/"
-                  className={`text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'
-                    }`}
+                  className={`text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}
                 >
                   Объекты
                 </Link>
